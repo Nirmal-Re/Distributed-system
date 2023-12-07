@@ -7,7 +7,7 @@ defmodule EventualLeaderDetector do
     # :global.unregister_name(name)
     case :global.re_register_name(name, pid) do
       :yes -> pid
-      :no -> :error
+      :no -> IO.puts("ERROR")
     end
 
     IO.puts("registered #{name}")
@@ -36,7 +36,7 @@ defmodule EventualLeaderDetector do
     state =
       receive do
         {:timeout} ->
-          IO.puts("#{state.name}: #{inspect({:timeout})} #{state.delta}")
+          # IO.puts("#{state.name}: #{inspect({:timeout})} #{state.delta}")
           state = adjust_delta(state)
           state = check_and_probe(state, state.processes)
           select_leader(state.alive, state.leader)
@@ -56,7 +56,8 @@ defmodule EventualLeaderDetector do
           %{state | alive: MapSet.put(state.alive, name)}
 
         {:crash, p} ->
-          IO.puts("#{state.name}: CRASH detected #{p}")
+          p_fail = String.to_atom(hd(String.split(Atom.to_string(p), "_")))
+          IO.puts("#{state.name}: CRASH detected #{p_fail}")
           state
 
         {:sus, p} ->
@@ -65,8 +66,9 @@ defmodule EventualLeaderDetector do
 
         {:new_leader, name} ->
           state = %{state | leader: name}
-          IO.puts("#{state.name}: New leader is #{name}")
-          # send(state.client, {:trust, state.leader})
+          # IO.puts("#{state.name}: New leader is #{name}")
+          leaderName = String.to_atom(hd(String.split(Atom.to_string(name), "_")))
+          send(state.client, {:trust, leaderName})
           state
       end
 
